@@ -1,0 +1,108 @@
+import { useEffect } from 'react'
+
+/**
+ * @name OGTScript
+ * @description Librería para visualizar y editar imágenes en formato OGT (Open Graphic Text)
+ * @author Alfonso Saavedra "Son Link"
+ * @license GPL-3.0-or-later
+ * @url https://github.com/son-link/ogtcript
+ * @param {string|object} selector El selector u objeto HTML del canvas donde se dibujara
+ * @example new OGTScript('#mi-canvas')
+ */
+class OGTScript {
+  constructor (canvas = null, options = null) {
+    this.canvas = null
+    this.ctx = null
+    this.filename = ''
+
+    if (!canvas) return
+
+    if (typeof canvas === 'string') this.canvas = document.querySelector(canvas)
+    else if (typeof canvas === 'object') this.canvas = canvas
+    else return
+
+    this.ctx = this.canvas.getContext('2d')
+
+    if (options && typeof options === 'object') this.options = options
+    else {
+      this.options = {
+        scale: 1,
+        autoSize: true
+      }
+    }
+
+    this.cur_canvas = {
+      lines: 0,
+      cols: 0,
+      rows: 0
+    }
+  }
+
+  /**
+   * Dibuja la imagen en el canvas
+   * @param {array} lines Las lineas del archivo que contienen la imagen
+   * @param {int} cols El total de columnas
+   * @param {int} rows El total de lineas
+   */
+  drawImage = function () {
+    this.clear()
+    this.ctx.save()
+
+    if (this.options.autoSize) {
+      this.canvas.width = this.options.scale * this.cur_canvas.cols
+      this.canvas.height = this.options.scale * this.cur_canvas.rows
+    }
+
+    this.ctx.scale(this.options.scale, this.options.scale)
+    let posx; let posy = 0
+
+    for (let row = 0; row < this.cur_canvas.rows; row++) {
+      const colors = this.cur_canvas.lines[row].split(';')
+
+      for (let col = 0; col < this.cur_canvas.cols; col++) {
+        const color = colors[col]
+        this.ctx.fillStyle = color
+        this.ctx.fillRect(posx, posy, 1, 1)
+        posx++
+      }
+
+      posx = 0
+      posy++
+    }
+
+    this.ctx.restore()
+  }
+
+  clear = function () {
+    if (this.ctx) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+  }
+
+  scale = function (scale) {
+    this.options.scale = parseInt(scale)
+    this.drawImage()
+  }
+}
+
+export default function OgtRender ({ children }) {
+  useEffect(() => {
+    const render = new OGTScript(document.querySelector('canvas'))
+
+    const data = children.split('\n')
+    const [format,, cols, rows] = data[0].split(';')
+    const lines = data.slice(1)
+    if (format.toLowerCase() !== 'ogt') return
+
+    render.cur_canvas.lines = lines
+    render.cur_canvas.cols = cols
+    render.cur_canvas.rows = rows
+
+    render.scale(10)
+    render.autoSize = true
+
+    render.drawImage()
+  }, [])
+
+  return (
+    <canvas />
+  )
+}
