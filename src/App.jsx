@@ -25,7 +25,7 @@ export default function App () {
       return
     }
 
-    const { content } = await fetch(`/api/generate?prompt=${prompt}`).then((res) => res.json())
+    const content = await fetch(`/api/generate?prompt=${prompt}`).then(res => res.text())
 
     if (!content) {
       setLoading(false)

@@ -1,10 +1,8 @@
-import { Configuration, OpenAIApi } from 'openai'
+import { OpenAIStream } from '../src/services/openai'
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY
-})
-
-const openai = new OpenAIApi(configuration)
+export const config = {
+  runtime: 'edge'
+}
 
 const system = `Only respond with code as plain text without code block syntax around it.
 The OGT image format is in text. It is built by lines, with hexadecimal colors, separated with semicolons, ending each line with a double semicolon. For example, a 3x2 image:
@@ -16,20 +14,21 @@ OGT;v0.6;3;2;;
 If the user does not specify a size, the default size is 8x8.
 Generates code as plain text from user prompt.`
 
-const DEFAULT_MESSAGE = 'Error generating image.'
+export default async (request, context) => {
+  const url = new URL(request.url)
 
-export default async function handler (req, res) {
-  const { prompt } = req.query
+  const prompt = url.searchParams.get('prompt')
 
-  const response = await openai.createChatCompletion({
+  const payload = {
     model: 'gpt-3.5-turbo',
+    stream: true,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: prompt }
     ]
-  })
+  }
 
-  const content = response?.data?.choices?.[0]?.message?.content.trim() || DEFAULT_MESSAGE
+  const stream = await OpenAIStream(payload)
 
-  res.status(200).json({ content })
+  return new Response(stream)
 }
